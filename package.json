@@ -1,0 +1,53 @@
+{
+  "name": "@bam-protect/maxential-thinking-mcp",
+  "version": "1.0.0",
+  "description": "Enhanced MCP server for deep sequential thinking with branch navigation, thought compression, and session persistence. Fork of Anthropic's sequential-thinking server.",
+  "license": "MIT",
+  "author": "BAM PROTECT DevCrew",
+  "homepage": "https://github.com/BAM-DevCrew/MAXential-Thinking-MCP",
+  "bugs": "https://github.com/BAM-DevCrew/MAXential-Thinking-MCP/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BAM-DevCrew/MAXential-Thinking-MCP.git"
+  },
+  "type": "module",
+  "bin": {
+    "maxential-thinking-mcp": "dist/src/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/src/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "chalk": "^5.3.0",
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22",
+    "@vitest/coverage-v8": "^2.1.8",
+    "shx": "^0.3.4",
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sequential-thinking",
+    "reasoning",
+    "ai-tools",
+    "claude",
+    "branch-reasoning",
+    "thought-compression",
+    "session-persistence"
+  ]
+}

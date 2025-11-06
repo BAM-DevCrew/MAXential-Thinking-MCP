@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Keep source files
+!src/**/*.ts
+!tests/**/*.ts
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Session storage (Phase 3)
+.sequential-thinking-enhanced/
+*.db
+*.db-journal
+
+# Temp
+tmp/
+temp/
