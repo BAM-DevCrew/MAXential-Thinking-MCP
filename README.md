@@ -185,4 +185,4 @@ MIT - See LICENSE file for details
 
 ---
 
-**Developed by BAM DevCrew and Claude Sonnet 4.5 in Claude Code** | [GitHub](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP) | [Issues](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP/issues)
+**Developed by BAM-DevCrew and Claude Sonnet 4.5 in Claude Code** | [GitHub](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP) | [Issues](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP/issues)
