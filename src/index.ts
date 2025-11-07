@@ -113,10 +113,58 @@ You should:
   }
 };
 
+const LIST_BRANCHES_TOOL: Tool = {
+  name: "list_branches",
+  description: "List all reasoning branches with their current status, thought counts, and last update times.",
+  inputSchema: { type: "object", properties: {}, required: [] }
+};
+
+const GET_BRANCH_TOOL: Tool = {
+  name: "get_branch",
+  description: "Retrieve complete details of a specific branch including all thoughts, origin, status, and conclusion.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "The ID of the branch to retrieve" }
+    },
+    required: ["branchId"]
+  }
+};
+
+const CLOSE_BRANCH_TOOL: Tool = {
+  name: "close_branch",
+  description: "Close a branch with an optional conclusion. Use when completing a tangent exploration.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "The ID of the branch to close" },
+      conclusion: { type: "string", description: "Optional summary or conclusion from this branch" }
+    },
+    required: ["branchId"]
+  }
+};
+
+const MERGE_BRANCH_TOOL: Tool = {
+  name: "merge_branch",
+  description: "Merge a branch back into the main reasoning line with chosen strategy.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "The ID of the branch to merge" },
+      strategy: {
+        type: "string",
+        enum: ["conclusion_only", "full_integration", "summary"],
+        description: "How to merge: conclusion_only, full_integration, or summary"
+      }
+    },
+    required: ["branchId", "strategy"]
+  }
+};
+
 const server = new Server(
   {
-    name: "sequential-thinking-server",
-    version: "0.2.0",
+    name: "maxential-thinking-server",
+    version: "1.0.0",
   },
   {
     capabilities: {
@@ -128,27 +176,37 @@ const server = new Server(
 const thinkingServer = new SequentialThinkingServer();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [SEQUENTIAL_THINKING_TOOL],
+  tools: [SEQUENTIAL_THINKING_TOOL, LIST_BRANCHES_TOOL, GET_BRANCH_TOOL, CLOSE_BRANCH_TOOL, MERGE_BRANCH_TOOL],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "sequentialthinking") {
-    return thinkingServer.processThought(request.params.arguments);
+  switch (request.params.name) {
+    case "sequentialthinking":
+      return thinkingServer.processThought(request.params.arguments);
+    case "list_branches":
+      return thinkingServer.listBranches();
+    case "get_branch":
+      return thinkingServer.getBranch(request.params.arguments);
+    case "close_branch":
+      return thinkingServer.closeBranch(request.params.arguments);
+    case "merge_branch":
+      return thinkingServer.mergeBranch(request.params.arguments);
+    default:
+      return {
+        content: [{
+          type: "text",
+          text: `Unknown tool: ${request.params.name}`
+        }],
+        isError: true
+      };
   }
-
-  return {
-    content: [{
-      type: "text",
-      text: `Unknown tool: ${request.params.name}`
-    }],
-    isError: true
-  };
 });
+
 
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Sequential Thinking MCP Server running on stdio");
+  console.error("MAXential Thinking MCP Server running on stdio");
 }
 
 runServer().catch((error) => {
