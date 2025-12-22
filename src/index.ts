@@ -7,121 +7,90 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { SequentialThinkingServer } from './lib.js';
+import { SequentialThinkingServer } from "./lib.js";
 
-const SEQUENTIAL_THINKING_TOOL: Tool = {
-  name: "sequentialthinking",
-  description: `A detailed tool for dynamic and reflective problem-solving through thoughts.
-This tool helps analyze problems through a flexible thinking process that can adapt and evolve.
-Each thought can build on, question, or revise previous insights as understanding deepens.
+// =============================================================================
+// THINKING TOOLS
+// =============================================================================
 
-When to use this tool:
-- Breaking down complex problems into steps
-- Planning and design with room for revision
-- Analysis that might need course correction
-- Problems where the full scope might not be clear initially
-- Problems that require a multi-step solution
-- Tasks that need to maintain context over multiple steps
-- Situations where irrelevant information needs to be filtered out
-
-Key features:
-- You can adjust total_thoughts up or down as you progress
-- You can question or revise previous thoughts
-- You can add more thoughts even after reaching what seemed like the end
-- You can express uncertainty and explore alternative approaches
-- Not every thought needs to build linearly - you can branch or backtrack
-- Generates a solution hypothesis
-- Verifies the hypothesis based on the Chain of Thought steps
-- Repeats the process until satisfied
-- Provides a correct answer
-
-Parameters explained:
-- thought: Your current thinking step, which can include:
-* Regular analytical steps
-* Revisions of previous thoughts
-* Questions about previous decisions
-* Realizations about needing more analysis
-* Changes in approach
-* Hypothesis generation
-* Hypothesis verification
-- next_thought_needed: True if you need more thinking, even if at what seemed like the end
-- thought_number: Current number in sequence (can go beyond initial total if needed)
-- total_thoughts: Current estimate of thoughts needed (can be adjusted up/down)
-- is_revision: A boolean indicating if this thought revises previous thinking
-- revises_thought: If is_revision is true, which thought number is being reconsidered
-- branch_from_thought: If branching, which thought number is the branching point
-- branch_id: Identifier for the current branch (if any)
-- needs_more_thoughts: If reaching end but realizing more thoughts needed
-
-You should:
-1. Start with an initial estimate of needed thoughts, but be ready to adjust
-2. Feel free to question or revise previous thoughts
-3. Don't hesitate to add more thoughts if needed, even at the "end"
-4. Express uncertainty when present
-5. Mark thoughts that revise previous thinking or branch into new paths
-6. Ignore information that is irrelevant to the current step
-7. Generate a solution hypothesis when appropriate
-8. Verify the hypothesis based on the Chain of Thought steps
-9. Repeat the process until satisfied with the solution
-10. Provide a single, ideally correct answer as the final output
-11. Only set next_thought_needed to false when truly done and a satisfactory answer is reached`,
+const THINK_TOOL: Tool = {
+  name: "think",
+  description: "Add a thought to your reasoning chain. Use this for step-by-step problem solving. The server automatically tracks thought numbers and history.",
   inputSchema: {
     type: "object",
     properties: {
       thought: {
         type: "string",
         description: "Your current thinking step"
-      },
-      nextThoughtNeeded: {
-        type: "boolean",
-        description: "Whether another thought step is needed"
-      },
-      thoughtNumber: {
-        type: "integer",
-        description: "Current thought number (numeric value, e.g., 1, 2, 3)",
-        minimum: 1
-      },
-      totalThoughts: {
-        type: "integer",
-        description: "Estimated total thoughts needed (numeric value, e.g., 5, 10)",
-        minimum: 1
-      },
-      isRevision: {
-        type: "boolean",
-        description: "Whether this revises previous thinking"
-      },
-      revisesThought: {
-        type: "integer",
-        description: "Which thought is being reconsidered",
-        minimum: 1
-      },
-      branchFromThought: {
-        type: "integer",
-        description: "Branching point thought number",
-        minimum: 1
-      },
-      branchId: {
-        type: "string",
-        description: "Branch identifier"
-      },
-      needsMoreThoughts: {
-        type: "boolean",
-        description: "If more thoughts are needed"
       }
     },
-    required: ["thought", "nextThoughtNeeded", "thoughtNumber", "totalThoughts"]
+    required: ["thought"]
+  }
+};
+
+const REVISE_TOOL: Tool = {
+  name: "revise",
+  description: "Revise a previous thought. Use when you realize earlier thinking was flawed or incomplete.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      thought: { type: "string", description: "Your revised thinking" },
+      revisesThought: { type: "integer", description: "The thought number being revised", minimum: 1 }
+    },
+    required: ["thought", "revisesThought"]
+  }
+};
+
+const COMPLETE_TOOL: Tool = {
+  name: "complete",
+  description: "Mark your thinking chain as complete with a final conclusion.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      conclusion: { type: "string", description: "Your final conclusion or answer" }
+    },
+    required: ["conclusion"]
+  }
+};
+
+// =============================================================================
+// BRANCHING TOOLS
+// =============================================================================
+
+const BRANCH_TOOL: Tool = {
+  name: "branch",
+  description: "Create a new reasoning branch to explore an alternative path. Like git branches for thoughts.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "A short identifier for this branch" },
+      reason: { type: "string", description: "Why you are branching" }
+    },
+    required: ["branchId", "reason"]
+  }
+};
+
+const SWITCH_BRANCH_TOOL: Tool = {
+  name: "switch_branch",
+  description: "Switch your active context to a different branch (or back to main).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "The branch to switch to, or omit for main" }
+    },
+    required: []
   }
 };
 
 const LIST_BRANCHES_TOOL: Tool = {
   name: "list_branches",
-  description: "List all reasoning branches with their current status, thought counts, and last update times.",
+  description: "List all reasoning branches with their status and thought counts.",
   inputSchema: { type: "object", properties: {}, required: [] }
 };
 
 const GET_BRANCH_TOOL: Tool = {
   name: "get_branch",
-  description: "Retrieve complete details of a specific branch including all thoughts, origin, status, and conclusion.",
+  description: "Retrieve complete details of a specific branch.",
   inputSchema: {
     type: "object",
     properties: {
@@ -133,12 +102,12 @@ const GET_BRANCH_TOOL: Tool = {
 
 const CLOSE_BRANCH_TOOL: Tool = {
   name: "close_branch",
-  description: "Close a branch with an optional conclusion. Use when completing a tangent exploration.",
+  description: "Close a branch with an optional conclusion.",
   inputSchema: {
     type: "object",
     properties: {
       branchId: { type: "string", description: "The ID of the branch to close" },
-      conclusion: { type: "string", description: "Optional summary or conclusion from this branch" }
+      conclusion: { type: "string", description: "Summary or conclusion" }
     },
     required: ["branchId"]
   }
@@ -146,67 +115,87 @@ const CLOSE_BRANCH_TOOL: Tool = {
 
 const MERGE_BRANCH_TOOL: Tool = {
   name: "merge_branch",
-  description: "Merge a branch back into the main reasoning line with chosen strategy.",
+  description: "Merge insights from a branch back into main. Strategies: conclusion_only, full_integration, summary",
   inputSchema: {
     type: "object",
     properties: {
       branchId: { type: "string", description: "The ID of the branch to merge" },
-      strategy: {
-        type: "string",
-        enum: ["conclusion_only", "full_integration", "summary"],
-        description: "How to merge: conclusion_only, full_integration, or summary"
-      }
+      strategy: { type: "string", enum: ["conclusion_only", "full_integration", "summary"], description: "How to merge" }
     },
     required: ["branchId", "strategy"]
   }
 };
 
-const server = new Server(
-  {
-    name: "maxential-thinking-server",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
+// =============================================================================
+// NAVIGATION TOOLS
+// =============================================================================
+
+const GET_THOUGHT_TOOL: Tool = {
+  name: "get_thought",
+  description: "Retrieve a specific thought by its number.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      thoughtNumber: { type: "integer", description: "The thought number to retrieve", minimum: 1 }
     },
+    required: ["thoughtNumber"]
   }
+};
+
+const GET_HISTORY_TOOL: Tool = {
+  name: "get_history",
+  description: "Get your thought history. Optionally filter by branch.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      branchId: { type: "string", description: "Optional: filter by branch" },
+      limit: { type: "integer", description: "Optional: limit results", minimum: 1 }
+    },
+    required: []
+  }
+};
+
+// =============================================================================
+// SERVER SETUP
+// =============================================================================
+
+const server = new Server(
+  { name: "maxential-thinking-server", version: "2.0.0" },
+  { capabilities: { tools: {} } }
 );
 
 const thinkingServer = new SequentialThinkingServer();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [SEQUENTIAL_THINKING_TOOL, LIST_BRANCHES_TOOL, GET_BRANCH_TOOL, CLOSE_BRANCH_TOOL, MERGE_BRANCH_TOOL],
+  tools: [
+    THINK_TOOL, REVISE_TOOL, COMPLETE_TOOL,
+    BRANCH_TOOL, SWITCH_BRANCH_TOOL, LIST_BRANCHES_TOOL, GET_BRANCH_TOOL, CLOSE_BRANCH_TOOL, MERGE_BRANCH_TOOL,
+    GET_THOUGHT_TOOL, GET_HISTORY_TOOL,
+  ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
-    case "sequentialthinking":
-      return thinkingServer.processThought(request.params.arguments);
-    case "list_branches":
-      return thinkingServer.listBranches();
-    case "get_branch":
-      return thinkingServer.getBranch(request.params.arguments);
-    case "close_branch":
-      return thinkingServer.closeBranch(request.params.arguments);
-    case "merge_branch":
-      return thinkingServer.mergeBranch(request.params.arguments);
+    case "think": return thinkingServer.think(request.params.arguments);
+    case "revise": return thinkingServer.revise(request.params.arguments);
+    case "complete": return thinkingServer.complete(request.params.arguments);
+    case "branch": return thinkingServer.branch(request.params.arguments);
+    case "switch_branch": return thinkingServer.switchBranch(request.params.arguments);
+    case "list_branches": return thinkingServer.listBranches();
+    case "get_branch": return thinkingServer.getBranch(request.params.arguments);
+    case "close_branch": return thinkingServer.closeBranch(request.params.arguments);
+    case "merge_branch": return thinkingServer.mergeBranch(request.params.arguments);
+    case "get_thought": return thinkingServer.getThought(request.params.arguments);
+    case "get_history": return thinkingServer.getHistory(request.params.arguments);
     default:
-      return {
-        content: [{
-          type: "text",
-          text: `Unknown tool: ${request.params.name}`
-        }],
-        isError: true
-      };
+      return { content: [{ type: "text", text: "Unknown tool: " + request.params.name }], isError: true };
   }
 });
-
 
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MAXential Thinking MCP Server running on stdio");
+  console.error("MAXential Thinking MCP Server v2.0.0 running on stdio");
 }
 
 runServer().catch((error) => {
