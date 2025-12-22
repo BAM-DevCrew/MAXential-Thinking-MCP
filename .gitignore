@@ -44,3 +44,6 @@ npm-debug.log*
 # Temp
 tmp/
 temp/
+
+# MCP config (contains API keys)
+.mcp.json
