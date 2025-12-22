@@ -1,188 +1,142 @@
 # MAXential Thinking MCP Server
 
-**Enhanced sequential thinking for AI reasoning with branch navigation, thought compression, and session persistence.**
+**Structured reasoning tools for Claude and other AI systems.**
 
-A powerful fork of Anthropic's [sequential-thinking MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking) that activates and extends the original's dormant branching capabilities.
+An MCP server that gives Claude explicit tools for managing their own reasoning process: adding thoughts, exploring branches, revising earlier thinking, and navigating their thought history.
 
-## Why MAXential?
+## What This Does
 
-The original sequential-thinking server included branch parameters in its schema but provided no tools to access, manage, or integrate branched reasoning. The data structures existed but were unusable.
+When Claude reasons through complex problems, they benefit from:
+- **Persistent thought chains** - Claude can reference earlier thoughts by number
+- **Branching** - Claude can explore alternative approaches without losing the main thread
+- **Revision** - Claude can explicitly mark when they're correcting earlier reasoning
+- **Navigation** - Claude can retrieve specific thoughts or review their reasoning history
 
-**MAXential Thinking** activates these dormant capabilities by adding branch management tools:
-- **🌿 Parallel Deep Exploration** - Create branches for different aspects, approaches, or hypotheses
-- **📊 Organized Analysis** - Each branch maintains its own thought chain with conclusions
-- **🔄 Clean Synthesis** - Retrieve and integrate findings from all branches
-- **💾 Cache Persistence** - Branches survive Claude Code session compaction, enabling long-running analysis
+Without these tools, Claude's reasoning is ephemeral and linear. With them, Claude can build structured, navigable reasoning chains.
 
-## Real-World Impact
+## Why 11 Tools Instead of 1?
 
-Production testing demonstrated:
-- **35 thoughts** in main reasoning chain
-- **6 parallel branches** exploring different dimensions of a complex problem
-- **58 total reasoning steps** across all branches
-- **Survived compaction in Claude Code** - all branch data retrievable after memory optimization
-- **Result:** Comprehensive analysis with prioritized recommendations that would be impossible with linear thinking alone
+The original sequential-thinking MCP server used a single tool with 9 parameters. Claude had to specify thought numbers, totals, flags, and branch metadata on every call.
 
-## Features
+**MAXential v2.0** provides focused tools that match how Claude actually thinks:
 
-### Phase 1: Branch Enhancement ✅ **COMPLETE**
-- `list_branches()` - View all reasoning branches with metadata
-- `get_branch(branchId)` - Retrieve complete branch with all thoughts and conclusions
-- `close_branch(branchId, conclusion)` - Mark branch complete with synthesis
-- `merge_branch(branchId, strategy)` - Integrate findings to main reasoning line
+| Category | Tools | What Claude Does |
+|----------|-------|------------------|
+| **Thinking** | `think`, `revise`, `complete` | Add thoughts, fix mistakes, conclude |
+| **Branching** | `branch`, `switch_branch`, `list_branches`, `get_branch`, `close_branch`, `merge_branch` | Explore alternatives in parallel |
+| **Navigation** | `get_thought`, `get_history` | Reference earlier reasoning |
 
-### Phase 2: Thought Compression 🚧 (Planned)
-- `create_checkpoint(thoughtNumber, name)` - Mark reasoning milestones
-- `create_summary(range, content)` - Compress thought ranges
-- `get_thought_chain(thoughtNumber)` - Retrieve dependency graph
-- Support for 100+ thought reasoning sessions
+## How Claude Uses These Tools
 
-### Phase 3: Session Persistence 🚧 (Planned)
-- `create_session(name)` - Initialize persistent reasoning session
-- `resume_session(sessionId)` - Continue previous reasoning
-- `export_session(sessionId, format)` - Export to markdown/JSON
-- Multi-session knowledge building
+### Sequential Reasoning
+```
+Claude calls: think("The problem has three components...")
+Server returns: { thoughtNumber: 1 }
+
+Claude calls: think("Component A handles authentication...")
+Server returns: { thoughtNumber: 2 }
+
+Claude calls: think("Component B manages state...")
+Server returns: { thoughtNumber: 3 }
+```
+
+Claude doesn't track numbers - the server handles that automatically.
+
+### Exploring Alternatives
+```
+Claude calls: branch("caching", "Exploring whether caching helps")
+Server returns: { branchId: "caching", originThought: 3 }
+
+Claude calls: think("Redis would add complexity but reduce latency...")
+// This thought is automatically on the "caching" branch
+
+Claude calls: switch_branch()  // Back to main
+Claude calls: think("Continuing main analysis...")
+```
+
+Claude can explore tangential questions without losing their place.
+
+### Correcting Earlier Thinking
+```
+Claude calls: revise("Actually, Component A also handles sessions", 2)
+Server returns: { thoughtNumber: 5, revisesThought: 2 }
+```
+
+Claude explicitly marks when they're updating earlier reasoning.
+
+### Reviewing Past Reasoning
+```
+Claude calls: get_thought(2)
+// Returns the full content of thought 2
+
+Claude calls: get_history({ limit: 5 })
+// Returns the last 5 thoughts
+```
+
+Claude can look back at what they concluded earlier.
+
+## Benefits for Claude
+
+| Without MAXential | With MAXential |
+|-------------------|----------------|
+| Reasoning disappears after each response | Thoughts persist and are retrievable |
+| Linear thinking only | Parallel exploration via branches |
+| No way to reference "thought 3" | Explicit thought numbering |
+| Revisions are implicit | Revisions are marked and tracked |
+| Context window is the only memory | Structured thought history |
 
 ## Installation
 
-### From NPM (when published)
-```bash
-npm install -g maxential-thinking-mcp
-```
-
-### From Source
 ```bash
 git clone https://github.com/BAM-DevCrew/MAXential-Thinking-MCP.git
 cd MAXential-Thinking-MCP
-npm install
-npm run build
-npm link
+npm install && npm run build
 ```
 
 ## Configuration
 
-### Claude Desktop
-
-Add to your `claude_desktop_config.json`:
+Add to `.mcp.json` or `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "maxential-thinking": {
       "command": "node",
-      "args": [
-        "/path/to/MAXential-Thinking-MCP/dist/index.js"
-      ]
+      "args": ["/path/to/MAXential-Thinking-MCP/dist/src/index.js"]
     }
   }
 }
 ```
 
-Or if installed via npm:
+## Tool Reference
 
-```json
-{
-  "mcpServers": {
-    "maxential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "maxential-thinking-mcp"
-      ]
-    }
-  }
-}
-```
+### Thinking
+- **`think`** `{ thought: string }` - Add a thought (auto-numbered)
+- **`revise`** `{ thought: string, revisesThought: number }` - Correct earlier thinking
+- **`complete`** `{ conclusion: string }` - Mark reasoning complete
 
-## Usage
+### Branching
+- **`branch`** `{ branchId: string, reason: string }` - Create and switch to branch
+- **`switch_branch`** `{ branchId?: string }` - Switch branches (omit for main)
+- **`list_branches`** `{}` - List all branches with status
+- **`get_branch`** `{ branchId: string }` - Get branch details and thoughts
+- **`close_branch`** `{ branchId: string, conclusion?: string }` - Close with conclusion
+- **`merge_branch`** `{ branchId: string, strategy: string }` - Integrate to main
 
-Fully backward compatible with the original sequential-thinking tool. All new features are additive.
-
-### Basic Sequential Thinking (Original Functionality)
-
-```typescript
-// Use the sequentialthinking tool as before
-{
-  "thought": "Analyzing the problem structure...",
-  "thoughtNumber": 1,
-  "totalThoughts": 10,
-  "nextThoughtNeeded": true
-}
-```
-
-### Branch Exploration (Now Active!)
-
-```typescript
-// Create a branch to explore an alternative approach
-{
-  "thought": "Exploring performance optimization strategies...",
-  "thoughtNumber": 5,
-  "totalThoughts": 10,
-  "nextThoughtNeeded": true,
-  "branchFromThought": 4,
-  "branchId": "performance-analysis"
-}
-
-// Continue exploring in the branch
-{
-  "thought": "Caching at the API layer reduces database calls by 60%...",
-  "thoughtNumber": 6,
-  "totalThoughts": 10,
-  "nextThoughtNeeded": true,
-  "branchId": "performance-analysis"
-}
-
-// Close the branch with conclusion
-close_branch("performance-analysis",
-  "API-level caching provides best performance improvement with minimal code changes.")
-
-// Later: retrieve the branch (even after Claude Code compaction)
-list_branches() // See all branches with metadata
-get_branch("performance-analysis") // Get complete branch with all thoughts
-
-// Integrate findings
-merge_branch("performance-analysis", "conclusion_only")
-```
-
-## How AI Uses Branches
-
-**Claude uses branches for:**
-- Parallel exploration of different solution approaches
-- Testing multiple implementation strategies before deciding
-- Deep-diving on tangential questions without losing main thread
-- Organizing complex architectural analysis by component or concern
-- Comparing trade-offs across different dimensions
-
-**Branches are not needed for:**
-- Linear problem-solving
-- Simple debugging
-- Sequential implementation tasks
+### Navigation
+- **`get_thought`** `{ thoughtNumber: number }` - Retrieve specific thought
+- **`get_history`** `{ branchId?: string, limit?: number }` - Get thought history
 
 ## Project Status
 
-- ✅ **Phase 1: Branch Enhancement** - Complete & tested in production
-- 🚧 **Phase 2: Thought Compression** - Planned for 100+ thought chains
-- 🚧 **Phase 3: Session Persistence** - Planned for multi-session reasoning
-
-See [DEV-PLAN.md](docs/MAXential-Thinking-DEV-PLAN.md) for detailed roadmap.
-
-## Architecture
-
-Built on the MCP (Model Context Protocol) framework:
-- **Tools:** `sequentialthinking`, `list_branches`, `get_branch`, `close_branch`, `merge_branch`
-- **Storage:** In-memory branch management with thought chain preservation
-- **Compatibility:** Fully backward compatible with sequential-thinking MCP
-
-## Credits
-
-Built on the excellent foundation of [Anthropic's sequential-thinking MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking).
-
-Special thanks to the MCP team for creating the protocol that makes tools like this possible.
+- **v2.0: Granular Tool API** - Complete
+- **Thought Compression** - Planned (for 100+ thought chains)
+- **Session Persistence** - Planned (multi-session reasoning)
 
 ## License
 
-MIT - See LICENSE file for details
+MIT
 
 ---
 
-**Developed by BAM-DevCrew and Claude Sonnet 4.5 in Claude Code** | [GitHub](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP) | [Issues](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP/issues)
+**Developed by BAM-DevCrew** | [GitHub](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP)
