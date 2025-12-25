@@ -216,12 +216,15 @@ export class SequentialThinkingServer {
       const data = input as Record<string, unknown>;
       const branchId = data.branchId as string | undefined;
 
-      if (branchId) {
-        if (!this.branches[branchId]) {
+      // Treat "main" the same as omitting branchId (git muscle memory)
+      const isMainSwitch = !branchId || branchId === 'main';
+
+      if (!isMainSwitch) {
+        if (!this.branches[branchId!]) {
           throw new BranchError(`Branch '${branchId}' not found`);
         }
-        if (this.branches[branchId].status !== 'active') {
-          throw new BranchError(`Branch '${branchId}' is ${this.branches[branchId].status}, not active`);
+        if (this.branches[branchId!].status !== 'active') {
+          throw new BranchError(`Branch '${branchId}' is ${this.branches[branchId!].status}, not active`);
         }
         this.activeBranchId = branchId;
       } else {
@@ -231,7 +234,7 @@ export class SequentialThinkingServer {
 
       return this.makeResponse({
         activeBranchId: this.activeBranchId || 'main',
-        message: branchId ? `Switched to branch '${branchId}'` : 'Switched to main'
+        message: isMainSwitch ? 'Switched to main' : `Switched to branch '${branchId}'`
       });
     } catch (error) {
       return this.makeError(error);
