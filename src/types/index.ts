@@ -21,6 +21,7 @@ export interface ThoughtData {
   // Phase 2: Thought Compression additions
   references?: number[]; // Array of thought numbers this builds on (DAG)
   type?: 'thought' | 'summary' | 'checkpoint';
+  tags?: string[]; // v2.2: semantic tags for categorization
 }
 
 // ============================================================================

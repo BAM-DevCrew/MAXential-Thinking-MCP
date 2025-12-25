@@ -53,6 +53,19 @@ const COMPLETE_TOOL: Tool = {
   }
 };
 
+
+const RESET_TOOL: Tool = {
+  name: "reset",
+  description: "Clear the current thinking session and start fresh. Use when beginning a new problem.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      confirm: { type: "boolean", description: "Must be true to confirm reset (prevents accidental clearing)" }
+    },
+    required: ["confirm"]
+  }
+};
+
 // =============================================================================
 // BRANCHING TOOLS
 // =============================================================================
@@ -155,12 +168,71 @@ const GET_HISTORY_TOOL: Tool = {
   }
 };
 
+
+// =============================================================================
+// ORGANIZATION TOOLS (v2.2)
+// =============================================================================
+
+const TAG_TOOL: Tool = {
+  name: "tag",
+  description: "Add or remove tags from a thought. Tags help categorize and search thoughts.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      thoughtNumber: { type: "integer", description: "The thought to tag", minimum: 1 },
+      add: { type: "array", items: { type: "string" }, description: "Tags to add" },
+      remove: { type: "array", items: { type: "string" }, description: "Tags to remove" }
+    },
+    required: ["thoughtNumber"]
+  }
+};
+
+const SEARCH_TOOL: Tool = {
+  name: "search",
+  description: "Search through thought history by content or tags.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Text to search for (case-insensitive)" },
+      tags: { type: "array", items: { type: "string" }, description: "Filter by tags (must have all specified)" },
+      branchId: { type: "string", description: "Limit search to specific branch" }
+    },
+    required: []
+  }
+};
+
+const EXPORT_TOOL: Tool = {
+  name: "export",
+  description: "Export the thinking chain to markdown or JSON format.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      format: { type: "string", enum: ["markdown", "json"], description: "Output format (default: markdown)" },
+      branchId: { type: "string", description: "Export only a specific branch" }
+    },
+    required: []
+  }
+};
+
+const VISUALIZE_TOOL: Tool = {
+  name: "visualize",
+  description: "Generate a visual diagram of the thinking chain and branches.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      format: { type: "string", enum: ["ascii", "mermaid"], description: "Output format (default: mermaid)" },
+      showContent: { type: "boolean", description: "Include thought content preview (default: false)" }
+    },
+    required: []
+  }
+};
+
 // =============================================================================
 // SERVER SETUP
 // =============================================================================
 
 const server = new Server(
-  { name: "maxential-thinking-server", version: "2.0.0" },
+  { name: "maxential-thinking-server", version: "2.2.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -168,9 +240,10 @@ const thinkingServer = new SequentialThinkingServer();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
-    THINK_TOOL, REVISE_TOOL, COMPLETE_TOOL,
+    THINK_TOOL, REVISE_TOOL, COMPLETE_TOOL, RESET_TOOL,
     BRANCH_TOOL, SWITCH_BRANCH_TOOL, LIST_BRANCHES_TOOL, GET_BRANCH_TOOL, CLOSE_BRANCH_TOOL, MERGE_BRANCH_TOOL,
     GET_THOUGHT_TOOL, GET_HISTORY_TOOL,
+    TAG_TOOL, SEARCH_TOOL, EXPORT_TOOL, VISUALIZE_TOOL,
   ],
 }));
 
@@ -179,6 +252,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case "think": return thinkingServer.think(request.params.arguments);
     case "revise": return thinkingServer.revise(request.params.arguments);
     case "complete": return thinkingServer.complete(request.params.arguments);
+    case "reset": return thinkingServer.reset(request.params.arguments);
     case "branch": return thinkingServer.branch(request.params.arguments);
     case "switch_branch": return thinkingServer.switchBranch(request.params.arguments);
     case "list_branches": return thinkingServer.listBranches();
@@ -187,6 +261,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case "merge_branch": return thinkingServer.mergeBranch(request.params.arguments);
     case "get_thought": return thinkingServer.getThought(request.params.arguments);
     case "get_history": return thinkingServer.getHistory(request.params.arguments);
+    case "tag": return thinkingServer.tag(request.params.arguments);
+    case "search": return thinkingServer.search(request.params.arguments);
+    case "export": return thinkingServer.export(request.params.arguments);
+    case "visualize": return thinkingServer.visualize(request.params.arguments);
     default:
       return { content: [{ type: "text", text: "Unknown tool: " + request.params.name }], isError: true };
   }
@@ -195,7 +273,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MAXential Thinking MCP Server v2.0.0 running on stdio");
+  console.error("MAXential Thinking MCP Server v2.2.0 running on stdio");
 }
 
 runServer().catch((error) => {

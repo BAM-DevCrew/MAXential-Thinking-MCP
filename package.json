@@ -1,6 +1,7 @@
 {
-  "name": "@bam-protect/maxential-thinking-mcp",
-  "version": "2.0.0",
+  "name": "@bam-devcrew/maxential-thinking-mcp",
+  "mcpName": "io.github.BAM-DevCrew/MAXential-Thinking-MCP",
+  "version": "2.2.0",
   "description": "Enhanced MCP server for deep sequential thinking with branch navigation, thought compression, and session persistence. Fork of Anthropic's sequential-thinking server.",
   "license": "MIT",
   "author": "BAM PROTECT DevCrew",
@@ -19,7 +20,7 @@
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/src/*.js",
-    "prepare": "npm run build",
+    "_prepare": "npm run build",
     "watch": "tsc --watch",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
