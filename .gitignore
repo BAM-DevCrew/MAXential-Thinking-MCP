@@ -47,3 +47,13 @@ temp/
 
 # MCP config (contains API keys)
 .mcp.json
+
+# Registry tokens (credentials)
+.mcpregistry_*
+
+# Binaries and build artifacts
+mcp-publisher*
+*.tgz
+
+# Claude Code local settings
+.claude/

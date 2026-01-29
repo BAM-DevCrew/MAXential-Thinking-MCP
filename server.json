@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.BAM-DevCrew/MAXential-Thinking-MCP",
+  "description": "11 focused tools for structured thinking, branching, revision, and navigation.",
+  "repository": {
+    "url": "https://github.com/BAM-DevCrew/MAXential-Thinking-MCP",
+    "source": "github"
+  },
+  "version": "2.0.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@bam-devcrew/maxential-thinking-mcp",
+      "version": "2.0.1",
+      "runtime": "node",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
