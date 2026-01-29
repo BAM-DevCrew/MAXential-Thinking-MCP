@@ -46,11 +46,13 @@ export class SequentialThinkingServer {
   private branches: Record<string, BranchData> = {};
   private activeBranchId: string | undefined;
   private disableThoughtLogging: boolean;
+  private echoThoughts: boolean;
   private currentThoughtNumber: number = 0;
   private isComplete: boolean = false;
 
   constructor() {
     this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
+    this.echoThoughts = (process.env.MAXENTIAL_ECHO_THOUGHTS || "true").toLowerCase() !== "false";
   }
 
   // ===========================================================================
@@ -130,12 +132,16 @@ export class SequentialThinkingServer {
 
       const thoughtData = this.addThought(data.thought);
 
-      return this.makeResponse({
+      const response: Record<string, unknown> = {
         thoughtNumber: thoughtData.thoughtNumber,
         activeBranchId: this.activeBranchId,
         totalThoughts: this.currentThoughtNumber,
         branchCount: Object.keys(this.branches).length
-      });
+      };
+      if (this.echoThoughts) {
+        response.thought = data.thought;
+      }
+      return this.makeResponse(response);
     } catch (error) {
       return this.makeError(error);
     }
@@ -162,12 +168,16 @@ export class SequentialThinkingServer {
         revisesThought: data.revisesThought as number
       });
 
-      return this.makeResponse({
+      const response: Record<string, unknown> = {
         thoughtNumber: thoughtData.thoughtNumber,
         revisesThought: data.revisesThought,
         activeBranchId: this.activeBranchId,
         totalThoughts: this.currentThoughtNumber
-      });
+      };
+      if (this.echoThoughts) {
+        response.thought = data.thought;
+      }
+      return this.makeResponse(response);
     } catch (error) {
       return this.makeError(error);
     }
@@ -420,12 +430,16 @@ export class SequentialThinkingServer {
         }
       }
 
-      return this.makeResponse({
+      const response: Record<string, unknown> = {
         thoughtNumber: data.thoughtNumber,
         tags: thought.tags,
         added,
         removed
-      });
+      };
+      if (this.echoThoughts) {
+        response.thought = thought.thought;
+      }
+      return this.makeResponse(response);
     } catch (error) {
       return this.makeError(error);
     }
@@ -874,16 +888,15 @@ export class SequentialThinkingServer {
         this.activeBranchId = undefined;
       }
 
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            branchId: branch.branchId,
-            status: branch.status,
-            closedAt: branch.closedAt
-          }, null, 2)
-        }]
+      const response: Record<string, unknown> = {
+        branchId: branch.branchId,
+        status: branch.status,
+        closedAt: branch.closedAt
       };
+      if (this.echoThoughts && branch.conclusion) {
+        response.conclusion = branch.conclusion;
+      }
+      return this.makeResponse(response);
     } catch (error) {
       return {
         content: [{
