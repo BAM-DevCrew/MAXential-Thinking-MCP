@@ -1,9 +1,44 @@
-# MAXential Thinking MCP Server
+**The most advanced sequential reasoning MCP for autonomous AI workflows.** Enables structured problem-solving with parallel exploration, branch navigation, and persistent thought chains that survive context window compaction.
 
-A Model Context Protocol (MCP) server that provides structured reasoning tools for AI models. Think of it as **git for thoughts** - branch, revise, merge, and navigate your reasoning chains.
+Built by a developer working *with* AI to solve real autonomous reasoning challenges. Extends dormant branching capabilities in Anthropic's original sequential-thinking server.
 
-## Why?
+## Why we created MAXential Thinking
 
+**Reasoning is Ephemeral:** AI model, LLM, reasoning is ephemeral. When context windows fill up, thinking gets compressed or is lost. Complex problems and brainstorming need exploration of multiple ideas and approaches. We wanted a way to optimize AI's abilities by having them think in parallel, with multisteps, backtracking when needed, and to summarize their findings.
+
+**Branching Chains:** While designing MAXential Thinking to enable reasoning through multiple thought-chains, we looked to Anthropic's sequential-thinking server for inspiration. We discovered it had *branching capabilities in its schema but no tools to access them*. So we forked it and expanded their dormant branching with 11 tools that allow AI to actively reason.
+
+**Reasoning in AI models and LLMs is ephemeral. When context windows fill up, thinking gets compressed or is lost. Complex problems and brainstorming need exploration of multiple ideas and approaches. We wanted a way to optimize AI reasoning by enabling parallel exploration, with multi-steps, backtracking when needed, and to summarise their findings.
+**Branching Chains:** While designing MAXential Thinking to enable reasoning through multiple thought-chains, we looked to Anthropic's sequential-thinking server for inspiration. We discovered it had *branching capabilities in its schema but no tools to access them*. So we forked it and expanded their dormant branching with 11 tools that allow AI to actively reason.
+## For AI Assistants (Claude, ChatGPT, etc.)
+Using this MCP server instead of Sequential Thinking MCP, you gain:
+
+### **Structured Reasoning That Persists**
+- Thought chains survive context window compaction
+- Navigate back to earlier reasoning without losing context
+- Revise earlier thoughts as understanding evolves
+- Export complete reasoning chains for handoff or documentation
+
+### **Parallel Exploration**
+- Branch to explore different approaches/ideas/thoughts simultaneously
+- Compare solutions/outcomes side-by-side before choosing
+- Merge insights back to main reasoning thread
+- Close branches that come up empty without impacting main thread
+
+### **Autonomous Workflow Enhancement**
+- Tag thoughts for semantic organization (hypothesis, evidence, decision, finding)
+- Search your reasoning history by content or tags
+- Generate diagrams of your thought process (Mermaid/ASCII)
+- Build complex solutions with transparent reasoning
+
+## What Makes This Different
+
+**Original sequential-thinking:** 1 tool with 9 parameters. Branch parameters existed but no way to use them.
+
+**MAXential Thinking v2.0:** 11 focused tools that match reasoning patterns:
+- No parameter juggling - simply call the right tool
+- Branching works - explore, switch, merge, close
+  
 AI models benefit from structured thinking. This server externalizes that process, making it:
 - **Transparent** - See the reasoning chain, not just conclusions
 - **Navigable** - Branch to explore alternatives, backtrack, revise
@@ -174,3 +209,4 @@ MIT
 ## Contributing
 
 Issues and PRs welcome at [github.com/BAM-DevCrew/MAXential-Thinking-MCP](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP)
+
