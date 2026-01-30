@@ -1,4 +1,5 @@
-**The most advanced sequential reasoning MCP for autonomous AI workflows.** Enables structured problem-solving with parallel exploration, branch navigation, and persistent thought chains that survive context window compaction.
+## The most advanced sequential reasoning MCP for autonomous AI workflows
+** Enables structured problem-solving with parallel exploration, branch navigation, and persistent thought chains that survive context window compaction.
 
 Built by a developer working *with* AI to solve real autonomous reasoning challenges. Extends dormant branching capabilities in Anthropic's original sequential-thinking server.
 
@@ -209,4 +210,5 @@ MIT
 ## Contributing
 
 Issues and PRs welcome at [github.com/BAM-DevCrew/MAXential-Thinking-MCP](https://github.com/BAM-DevCrew/MAXential-Thinking-MCP)
+
 
