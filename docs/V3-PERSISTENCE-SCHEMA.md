@@ -1,15 +1,15 @@
-# MAXential v2.3 + MAXc — Persistence Schema Design
+# MAXential v2.3 — Persistence Schema Design
 
-**Date:** February 15, 2026  
-**Status:** Design Review  
-**Target:** MAXential v2.3 (persistence layer), inherited by MAXc (multi-agent coordination)  
+**Date:** February 15, 2026 (revised February 16, 2026)
+**Status:** Design Review
+**Target:** MAXential v2.3 (persistence layer — foundation for multi-agent features in v2.4+)
 **Depends on:** Phase 0 Findings (Agent-MCP Connection Model)
 
 ---
 
 ## Design Philosophy
 
-1. **Forward-compatible** — All V3 tables created upfront (agents, syntheses, thought_references), even though Phase 1 won't populate them. Empty tables cost nothing in SQLite. Phases 2 and 3 just start inserting — no schema migrations needed.
+1. **Forward-compatible** — All tables created upfront (agents, syntheses, thought_references), even though Phase 1 won't populate them. Empty tables cost nothing in SQLite. v2.4+ just starts inserting — no schema migrations needed.
 
 2. **Backward-compatible** — Everything new is optional. No `session_id` provided? Auto-create one. No `agent_id`? It's null (orchestrator). Existing v2.2 behavior is preserved exactly. Users who don't care about persistence get the same experience.
 
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS thought_references (
 );
 ```
 
-### Table: `agents` *(Phase 2 — table created now, populated later)*
+### Table: `agents` *(v2.4 — table created now, populated later)*
 Tracks agent lifecycle in multi-agent sessions.
 
 ```sql
@@ -147,7 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_agents_status
     ON agents(session_id, status);
 ```
 
-### Table: `syntheses` *(Phase 3 — table created now, populated later)*
+### Table: `syntheses` *(v3.0 — table created now, populated later)*
 Integrated conclusions from multiple agent branches.
 
 ```sql
@@ -347,4 +347,4 @@ Generate a compressed summary for token-efficient loading into new contexts.
 
 ---
 
-*This schema is designed to be created once and never migrated. All future phases (agent awareness, cross-agent intelligence, synthesis) populate tables that already exist.*
+*This schema is designed to be created once and never migrated. Future versions (v2.4 agent awareness, v3.0 cross-agent intelligence) populate tables that already exist.*

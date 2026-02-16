@@ -1,11 +1,11 @@
-# MAXential + MAXc — Updated Research & Development Plan
+# MAXential Thinking MCP — Development Plan
 
 ## Supersedes: V3-RESEARCH-ROADMAP.md
 ## Incorporates: Phase 0 Findings, Persistence Schema Design, Product Strategy Decisions
 
-**Date:** February 15, 2026  
-**Author:** Kent + Claude (collaborative session)  
-**Status:** Active — Phase 1 Ready to Build  
+**Date:** February 15, 2026 (revised February 16, 2026)
+**Author:** Kent + Claude (collaborative sessions)
+**Status:** Active — Phase 1 Ready to Build
 **Origin:** White paper "Beyond Reward Signals: Metacognitive Architecture as the Missing Layer in AI Advancement"
 
 ---
@@ -16,12 +16,12 @@
 |----------|------|-----------|
 | Agent-MCP model is all three (A, B, C) depending on context | Feb 15, 2026 | Phase 0 research — see findings doc |
 | SQLite with WAL mode + `busy_timeout` for persistence | Feb 15, 2026 | Handles concurrent agents, zero dependencies, sub-ms writes |
-| Two-product strategy: MAXential v2.3 → MAXc fork | Feb 15, 2026 | Persistence benefits all users; agent coordination is a distinct product |
-| MAXc is model-agnostic, not Claude-specific | Feb 15, 2026 | Persistence layer (SQLite file) is the universal coordination substrate — any MCP client can use it |
-| "Shared vs separate process" is MAXc's core design challenge | Feb 15, 2026 | Must work transparently across same-process, same-machine, and future networked modes |
+| MAXential is model-agnostic, not Claude-specific | Feb 15, 2026 | Persistence layer (SQLite file) is the universal coordination substrate — any MCP client can use it |
+| "Shared vs separate process" is the core design challenge for multi-agent | Feb 15, 2026 | Must work transparently across same-process, same-machine, and future networked modes |
 | Project-local DB default (`.maxential/`) with env var override | Feb 15, 2026 | Agent teammates auto-discover; global via `MAXENTIAL_DB_PATH` |
 | Human-readable auto-labels for sessions | Feb 15, 2026 | "Session 2026-02-15 2:30 PM" with optional context extraction |
-| MAXc is a working name (temporary) | Feb 15, 2026 | Final naming deferred |
+| Single product — no fork | Feb 16, 2026 | Multi-agent features are a deployment pattern, not a separate product. One repo, one npm package, one maintenance surface. Agent awareness is additive to the existing tool set. |
+| Keep the MAXential Thinking name | Feb 16, 2026 | Already published on npm, referenced in white paper, on GitHub. Renaming costs outweigh benefits. The README explains the value, not the name. |
 
 ---
 
@@ -30,31 +30,17 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
-│  MAXential v2.3                                             │
+│  MAXential Thinking MCP                                     │
 │  "Metacognitive thinking tools for any AI"                  │
 │  ─────────────────────────────────────────                  │
-│  • 20 tools (16 existing + 4 session tools)                 │
-│  • In-memory thinking engine (unchanged)                    │
-│  • SQLite persistence layer (NEW)                           │
-│  • Model-agnostic, works with any MCP client                │
-│  • npm: @bam-devcrew/maxential-thinking-mcp                 │
 │                                                             │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          │ fork (inherits full v2.3 codebase)
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
+│  v2.2 (current)  — 16 tools, in-memory thinking engine     │
+│  v2.3 (Phase 1)  — + persistence layer, 4 session tools    │
+│  v2.4 (Phase 2)  — + agent awareness, 8 multi-agent tools  │
+│  v3.0 (Phase 3)  — + cross-agent intelligence              │
 │                                                             │
-│  MAXc (working name)                                        │
-│  "Multi-agent cognitive infrastructure for MCP"             │
-│  ─────────────────────────────────────────────              │
-│  • Everything in MAXential v2.3, plus:                      │
-│  • Agent lifecycle tools (register, handoff, status)        │
-│  • Cross-agent observation and interjection                 │
-│  • Cross-agent search and synthesis                         │
-│  • Universal process coordination layer                     │
-│  • Model-agnostic — any MCP client, any model               │
-│  • npm: @bam-devcrew/maxc (TBD)                             │
+│  npm: @bam-devcrew/maxential-thinking-mcp                   │
+│  Model-agnostic — works with any MCP client                 │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -74,12 +60,12 @@ MODE 1: SHARED PROCESS                    MODE 2: SHARED FILE
 ┌──────────────────────┐                  ┌──────────┐  ┌──────────┐
 │   Host Application   │                  │ Agent A   │  │ Agent B   │
 │  ┌────────────────┐  │                  │ ┌──────┐  │  │ ┌──────┐  │
-│  │  Orchestrator   │  │                  │ │MAXc  │  │  │ │MAXc  │  │
+│  │  Orchestrator   │  │                  │ │ MCP  │  │  │ │ MCP  │  │
 │  │  Agent A        │──┼── same instance  │ │inst. │  │  │ │inst. │  │
 │  │  Agent B        │  │                  │ └──┬───┘  │  │ └──┬───┘  │
 │  └───────┬────────┘  │                  └────┼──────┘  └────┼──────┘
 │     ┌────▼─────┐     │                       │              │
-│     │  MAXc    │     │                       ▼              ▼
+│     │  MCP    │     │                       ▼              ▼
 │     │ (memory) │     │                  ┌────────────────────────┐
 │     └──────────┘     │                  │  .maxential/thinking.db │
 └──────────────────────┘                  │  (SQLite + WAL)         │
@@ -93,7 +79,7 @@ MODE 3: NETWORKED (future)
       │              │
       ▼              ▼
 ┌────────────────────────┐
-│  MAXc Server (HTTP)     │
+│  MAXential Server (HTTP)│
 │  ┌──────────────────┐  │
 │  │  SQLite backend   │  │
 │  └──────────────────┘  │
@@ -112,35 +98,27 @@ MODE 3: NETWORKED (future)
 | No MCP Access | Claude Code background subagents | Agent has no MCP tools; orchestrator must proxy context via prompts |
 | Networked | Future / custom SDK builds | HTTP/SSE transport, remote connections |
 
-### Design Principle: Transparent Mode Detection
+### Design Principle: Transparent Mode Handling
 
-MAXc should detect which mode it's operating in and behave correctly without user configuration. The investigation plan:
+The persistence layer handles coordination transparently without user configuration:
 
-1. **Can we detect shared-process mode?** If two tool calls arrive in the same Node.js process, they share memory. This is the default — no detection needed, it's just how in-memory works.
+1. **Shared-process mode** — In-memory state is shared automatically. No detection needed.
 
-2. **Can we detect shared-file mode?** If `MAXENTIAL_DB_PATH` points to a file (or the default `.maxential/thinking.db` exists), we're in persistent mode. Multiple instances hitting the same file are coordinated by SQLite's WAL + `busy_timeout`.
+2. **Shared-file mode** — Multiple instances hitting the same SQLite file are coordinated by WAL + `busy_timeout`. No detection needed.
 
-3. **Can we detect no-MCP mode?** We can't — the agent simply doesn't have our tools. The orchestrator handles this by reading from MAXc and injecting context into the agent's prompt. This is an orchestrator pattern, not a MAXc feature.
+3. **No-MCP mode** — The agent doesn't have our tools. The orchestrator handles this by reading from MAXential and injecting context into the agent's prompt. This is an orchestrator pattern, not a MAXential feature.
 
-4. **Can we detect networked mode?** Future: MAXc starts as an HTTP server instead of stdio. Configured explicitly, not auto-detected.
+4. **Networked mode** — Future: MAXential starts as an HTTP server instead of stdio. Configured explicitly.
 
-**Key insight:** Modes 1 and 2 require no detection. In-memory works when processes are shared. SQLite works when they're separate. Both can be active simultaneously (write-through). The "universal problem" may be simpler than it first appeared — the persistence layer IS the solution for cross-process coordination, and in-memory IS the solution for same-process coordination. Both run in parallel.
-
-### Investigation Items (Phase 2 of MAXc)
-
-- [ ] Test: Do non-Claude MCP clients (Cursor, Windsurf, VS Code Copilot) support subagent spawning?
-- [ ] Test: When they do, do subagents share the MCP server instance or get their own?
-- [ ] Test: Can we reliably detect "I'm a new instance connecting to an existing session" via SQLite?
-- [ ] Test: File locking behavior across MCP clients — any conflicts beyond what WAL handles?
-- [ ] Document: Coordination patterns for each major MCP client
+**Key insight:** Modes 1 and 2 require no detection. In-memory works when processes are shared. SQLite works when they're separate. Both run in parallel (write-through). The persistence layer IS the solution for cross-process coordination, and in-memory IS the solution for same-process coordination.
 
 ---
 
-## Development Phases (Updated)
+## Development Phases
 
-### Phase 1: MAXential v2.3 — Persistence Layer
+### Phase 1: v2.3 — Persistence Layer
 
-**Goal:** Ship SQLite persistence to MAXential. Universal benefit, foundation for MAXc.
+**Goal:** Ship SQLite persistence. Universal benefit — sessions survive across conversations, and multi-agent coordination becomes possible as a side effect.
 
 **New files:**
 - `src/persistence.ts` — SQLite operations, schema creation, WAL setup
@@ -176,7 +154,7 @@ PRAGMA busy_timeout = 5000;      -- retry on contention for 5s before failing
 
 **Schema:** 7 tables created upfront (see V3-PERSISTENCE-SCHEMA.md)
 - `sessions`, `thoughts`, `branches`, `tags` — used immediately
-- `thought_references`, `agents`, `syntheses` — created empty, used by MAXc
+- `thought_references`, `agents`, `syntheses` — created empty, used by Phase 2+
 
 **Session auto-creation:**
 - First `think()` call auto-creates a session if none exists
@@ -197,11 +175,11 @@ PRAGMA busy_timeout = 5000;      -- retry on contention for 5s before failing
 
 ---
 
-### Phase 2: MAXc — Fork + Agent Awareness
+### Phase 2: v2.4 — Agent Awareness
 
-**Goal:** Fork MAXential v2.3 into MAXc. Add agent lifecycle and cross-agent observation.
+**Goal:** Add agent lifecycle and cross-agent observation tools. Multi-agent coordination becomes a first-class feature.
 
-**Prerequisite:** MAXential v2.3 shipped and stable.
+**Prerequisite:** v2.3 shipped and stable.
 
 **New tools (8):**
 
@@ -222,17 +200,15 @@ PRAGMA busy_timeout = 5000;      -- retry on contention for 5s before failing
 - [ ] Determine if mode detection is needed or if dual-mode (memory + SQLite) handles everything
 
 **Deliverables:**
-- [ ] New repo: `MAXc` (or final name)
-- [ ] Fork from MAXential v2.3
 - [ ] Agent lifecycle tools
 - [ ] Cross-agent observation tools
 - [ ] Updated `search`, `export`, `visualize` with agent filtering
 - [ ] Tests: multi-agent scenarios, concurrent writes
-- [ ] npm publish as `@bam-devcrew/maxc` (or final name)
+- [ ] npm publish as `@bam-devcrew/maxential-thinking-mcp@2.4.0`
 
 ---
 
-### Phase 3: MAXc — Cross-Agent Intelligence
+### Phase 3: v3.0 — Cross-Agent Intelligence
 
 **Goal:** Pattern detection, automatic cross-referencing, session-spanning insights.
 
@@ -251,7 +227,7 @@ PRAGMA busy_timeout = 5000;      -- retry on contention for 5s before failing
 
 ---
 
-### Phase 4: MAXc — Networked Architecture (if needed)
+### Phase 4: Networked Architecture (if needed)
 
 **Goal:** HTTP/SSE transport for remote multi-machine coordination.
 
@@ -265,28 +241,28 @@ PRAGMA busy_timeout = 5000;      -- retry on contention for 5s before failing
 
 ---
 
-## Connection to White Paper Thesis (Updated)
+## Connection to White Paper Thesis
 
-| White Paper Concept | Implementation | Product |
+| White Paper Concept | Implementation | Phase |
 |---|---|---|
-| External metacognitive scaffolding | Thinking tools (think, branch, revise, search) | MAXential v2.x |
-| Accumulated self-knowledge | Persistent sessions, cross-session patterns | MAXential v2.3 |
-| Parallel exploration | Agent branches exploring simultaneously | MAXc Phase 2 |
-| Real-time self-monitoring | `agent_observe` + `agent_interject` | MAXc Phase 2 |
-| Interpretability-capability loop | Studying tool usage patterns to inform architecture | MAXc Phase 3 |
-| Super memory | Cross-session learning layer | MAXc Phase 3 |
-| Metacognitive architecture | The complete shared cognitive bus | MAXc (full) |
+| External metacognitive scaffolding | Thinking tools (think, branch, revise, search) | v2.x (shipped) |
+| Accumulated self-knowledge | Persistent sessions, cross-session patterns | v2.3 (Phase 1) |
+| Parallel exploration | Agent branches exploring simultaneously | v2.4 (Phase 2) |
+| Real-time self-monitoring | `agent_observe` + `agent_interject` | v2.4 (Phase 2) |
+| Interpretability-capability loop | Studying tool usage patterns to inform architecture | v3.0 (Phase 3) |
+| Super memory | Cross-session learning layer | v3.0 (Phase 3) |
+| Metacognitive architecture | The complete cognitive infrastructure | v3.0+ |
 
 ---
 
 ## Immediate Next Steps
 
-1. **Build:** MAXential v2.3 persistence layer (`src/persistence.ts`)
+1. **Build:** v2.3 persistence layer (`src/persistence.ts`)
 2. **Test:** Session round-trip, concurrent access, backward compatibility
 3. **Ship:** `@bam-devcrew/maxential-thinking-mcp@2.3.0`
-4. **Fork:** Create MAXc repo from v2.3 codebase
+4. **Document:** Multi-agent usage patterns in README (shared SQLite via Agent Teams, etc.)
 5. **Investigate:** Multi-client coordination testing (shared-file mode)
-6. **Build:** MAXc Phase 2 agent tools
+6. **Build:** v2.4 agent awareness tools
 
 ---
 
