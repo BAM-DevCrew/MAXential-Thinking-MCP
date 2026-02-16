@@ -1,0 +1,78 @@
+erDiagram
+    sessions ||--o{ thoughts : contains
+    sessions ||--o{ branches : contains
+    sessions ||--o{ agents : contains
+    sessions ||--o{ syntheses : contains
+    thoughts ||--o{ tags : "tagged with"
+    thoughts ||--o{ thought_references : "references"
+    branches ||--o{ thoughts : "scopes"
+    agents ||--o{ thoughts : "authored by"
+    agents ||--o{ branches : "owns"
+
+    sessions {
+        text id PK "uuid"
+        text name "human-readable"
+        text description "optional context"
+        text status "active | complete | archived"
+        integer created_at "unix ms"
+        integer updated_at "unix ms"
+    }
+
+    thoughts {
+        integer id PK "autoincrement"
+        text session_id FK "→ sessions"
+        integer thought_number "per-session sequence"
+        text thought "the content"
+        text type "thought | summary | checkpoint | conclusion | branch_start | interjection"
+        text branch_id FK "→ branches (NULL = main)"
+        text agent_id FK "→ agents (NULL = orchestrator)"
+        integer is_revision "0 or 1"
+        integer revises_thought "thought_number"
+        integer branch_from_thought "thought_number"
+        integer created_at "unix ms"
+    }
+
+    branches {
+        text id PK "user-provided"
+        text session_id PK "→ sessions"
+        integer origin_thought "branched from"
+        text status "active | closed | merged"
+        text conclusion "set on close"
+        text agent_id FK "→ agents"
+        text merge_strategy "how it was merged"
+        integer created_at "unix ms"
+        integer closed_at "unix ms"
+        integer merged_at "unix ms"
+    }
+
+    tags {
+        text session_id PK "→ sessions"
+        integer thought_number PK "→ thoughts"
+        text tag PK "lowercase trimmed"
+    }
+
+    thought_references {
+        text session_id PK "→ sessions"
+        integer from_thought PK "this thought"
+        integer to_thought PK "references this"
+    }
+
+    agents {
+        text id PK "agent identifier"
+        text session_id PK "→ sessions"
+        text name "human-readable"
+        text description "what it does"
+        text parent_agent_id "nested agents"
+        text status "active | completed | failed | blocked"
+        text branch_id "auto-created branch"
+        integer registered_at "unix ms"
+        integer completed_at "unix ms"
+    }
+
+    syntheses {
+        text id PK "uuid"
+        text session_id FK "→ sessions"
+        text source_branches "JSON array"
+        text content "synthesized analysis"
+        integer created_at "unix ms"
+    }
