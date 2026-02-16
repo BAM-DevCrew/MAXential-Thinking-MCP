@@ -4,8 +4,10 @@ import {
   ThoughtData,
   BranchData,
   BranchSummary,
-  BranchError
+  BranchError,
+  SessionMetadata,
 } from './types/index.js';
+import { PersistenceLayer, resolveDbPath } from './persistence.js';
 
 // ===========================================================================
 // Logging (v2.2)
@@ -50,9 +52,23 @@ export class SequentialThinkingServer {
   private currentThoughtNumber: number = 0;
   private isComplete: boolean = false;
 
+  // v2.3: Persistence
+  private persistence: PersistenceLayer | null = null;
+  private currentSessionId: string | null = null;
+
   constructor() {
     this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
     this.echoThoughts = (process.env.MAXENTIAL_ECHO_THOUGHTS || "true").toLowerCase() !== "false";
+
+    // Initialize persistence layer
+    try {
+      const dbPath = resolveDbPath();
+      this.persistence = new PersistenceLayer(dbPath);
+      logInfo(`Persistence enabled: ${dbPath}`);
+    } catch (error) {
+      logError('Failed to initialize persistence — running in-memory only', error);
+      this.persistence = null;
+    }
   }
 
   // ===========================================================================
@@ -79,6 +95,20 @@ export class SequentialThinkingServer {
     };
   }
 
+  private ensureSession(): void {
+    if (this.currentSessionId || !this.persistence) return;
+
+    const now = new Date();
+    const label = `Session ${now.toLocaleDateString('en-US', {
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    })} ${now.toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true
+    })}`;
+
+    this.currentSessionId = this.persistence.createSession(label);
+    logInfo(`Auto-created session: ${this.currentSessionId} "${label}"`);
+  }
+
   private addThought(thought: string, options: {
     isRevision?: boolean;
     revisesThought?: number;
@@ -103,6 +133,12 @@ export class SequentialThinkingServer {
     // Add to branch if we're on one
     if (this.activeBranchId && this.branches[this.activeBranchId]) {
       this.branches[this.activeBranchId].thoughts.push(thoughtData);
+    }
+
+    // Write-through to persistence
+    if (this.persistence) {
+      this.ensureSession();
+      this.persistence.insertThought(this.currentSessionId!, thoughtData);
     }
 
     // Log if enabled
@@ -194,6 +230,11 @@ export class SequentialThinkingServer {
       this.isComplete = true;
       const thoughtData = this.addThought(`CONCLUSION: ${data.conclusion}`);
 
+      // Mark session as complete in persistence
+      if (this.persistence && this.currentSessionId) {
+        this.persistence.updateSessionStatus(this.currentSessionId, 'complete');
+      }
+
       return this.makeResponse({
         status: 'complete',
         conclusionThought: thoughtData.thoughtNumber,
@@ -220,12 +261,18 @@ export class SequentialThinkingServer {
         branches: Object.keys(this.branches).length
       };
 
+      // Mark current session as complete in persistence
+      if (this.persistence && this.currentSessionId) {
+        this.persistence.updateSessionStatus(this.currentSessionId, 'complete');
+      }
+
       // Reset all state
       this.thoughtHistory = [];
       this.branches = {};
       this.activeBranchId = undefined;
       this.currentThoughtNumber = 0;
       this.isComplete = false;
+      this.currentSessionId = null;
 
       return this.makeResponse({
         status: 'reset',
@@ -259,13 +306,19 @@ export class SequentialThinkingServer {
       const originThought = this.currentThoughtNumber;
 
       // Create the branch
-      this.branches[data.branchId] = {
+      const branchData: BranchData = {
         branchId: data.branchId,
         originThought,
         thoughts: [],
         status: 'active',
         createdAt: Date.now()
       };
+      this.branches[data.branchId] = branchData;
+
+      // Write-through to persistence
+      if (this.persistence && this.currentSessionId) {
+        this.persistence.insertBranch(this.currentSessionId, branchData);
+      }
 
       // Switch to the new branch
       this.activeBranchId = data.branchId;
@@ -428,6 +481,11 @@ export class SequentialThinkingServer {
             removed.push(normalized);
           }
         }
+      }
+
+      // Write-through to persistence
+      if (this.persistence && this.currentSessionId && (added.length > 0 || removed.length > 0)) {
+        this.persistence.setTags(this.currentSessionId, data.thoughtNumber as number, thought.tags);
       }
 
       const response: Record<string, unknown> = {
@@ -884,6 +942,11 @@ export class SequentialThinkingServer {
         branch.conclusion = data.conclusion;
       }
 
+      // Write-through to persistence
+      if (this.persistence && this.currentSessionId) {
+        this.persistence.updateBranchClose(this.currentSessionId, data.branchId, branch.conclusion, branch.closedAt);
+      }
+
       if (this.activeBranchId === data.branchId) {
         this.activeBranchId = undefined;
       }
@@ -898,16 +961,7 @@ export class SequentialThinkingServer {
       }
       return this.makeResponse(response);
     } catch (error) {
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
-            status: 'failed'
-          }, null, 2)
-        }],
-        isError: true
-      };
+      return this.makeError(error);
     }
   }
 
@@ -938,6 +992,11 @@ export class SequentialThinkingServer {
       branch.status = 'merged';
       branch.mergedAt = mergedAt;
 
+      // Write-through to persistence
+      if (this.persistence && this.currentSessionId) {
+        this.persistence.updateBranchMerge(this.currentSessionId, data.branchId, strategy, mergedAt);
+      }
+
       if (this.activeBranchId === data.branchId) {
         this.activeBranchId = undefined;
       }
@@ -957,29 +1016,213 @@ export class SequentialThinkingServer {
           break;
       }
 
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            branchId: branch.branchId,
-            status: branch.status,
-            mergedAt: branch.mergedAt,
-            mergeThoughtNumber: nextThoughtNumber,
-            mergeContent: mergeContent
-          }, null, 2)
-        }]
-      };
+      return this.makeResponse({
+        branchId: branch.branchId,
+        status: branch.status,
+        mergedAt: branch.mergedAt,
+        mergeThoughtNumber: nextThoughtNumber,
+        mergeContent: mergeContent
+      });
     } catch (error) {
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
-            status: 'failed'
-          }, null, 2)
-        }],
-        isError: true
-      };
+      return this.makeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // Session Tools (v2.3)
+  // ===========================================================================
+
+  public sessionSave(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+    try {
+      if (!this.persistence) {
+        throw new Error('Persistence is not enabled');
+      }
+
+      const data = input as Record<string, unknown>;
+
+      if (!data.name || typeof data.name !== 'string') {
+        throw new Error('Invalid name: must be a string');
+      }
+
+      // If no session exists yet, create one
+      this.ensureSession();
+
+      const description = typeof data.description === 'string' ? data.description : undefined;
+      this.persistence.updateSessionName(this.currentSessionId!, data.name, description);
+
+      const session = this.persistence.getSession(this.currentSessionId!);
+
+      return this.makeResponse({
+        sessionId: this.currentSessionId,
+        name: data.name,
+        description: description,
+        thoughtCount: session?.thoughtCount ?? this.thoughtHistory.length,
+        branchCount: session?.branchCount ?? Object.keys(this.branches).length,
+        savedAt: Date.now()
+      });
+    } catch (error) {
+      return this.makeError(error);
+    }
+  }
+
+  public sessionLoad(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+    try {
+      if (!this.persistence) {
+        throw new Error('Persistence is not enabled');
+      }
+
+      const data = input as Record<string, unknown>;
+
+      if (!data.id || typeof data.id !== 'string') {
+        throw new Error('Invalid id: must be a string');
+      }
+
+      const loaded = this.persistence.loadSession(data.id);
+      if (!loaded) {
+        throw new Error(`Session '${data.id}' not found`);
+      }
+
+      // Hydrate in-memory state
+      this.thoughtHistory = loaded.state.thoughtHistory;
+      this.branches = loaded.state.branches;
+      this.currentSessionId = data.id;
+
+      // Restore thought counter and completion state
+      if (this.thoughtHistory.length > 0) {
+        this.currentThoughtNumber = Math.max(...this.thoughtHistory.map(t => t.thoughtNumber));
+        const lastThought = this.thoughtHistory[this.thoughtHistory.length - 1];
+        this.isComplete = lastThought.thought.startsWith('CONCLUSION:');
+      } else {
+        this.currentThoughtNumber = 0;
+        this.isComplete = false;
+      }
+
+      // Restore active branch (find the last active one, or none)
+      this.activeBranchId = undefined;
+      for (const branch of Object.values(this.branches)) {
+        if (branch.status === 'active') {
+          this.activeBranchId = branch.branchId;
+          break;
+        }
+      }
+
+      // Mark session as active again
+      this.persistence.updateSessionStatus(data.id, 'active');
+
+      return this.makeResponse({
+        sessionId: data.id,
+        name: loaded.metadata.name,
+        description: loaded.metadata.description,
+        thoughtCount: loaded.metadata.thoughtCount,
+        branchCount: loaded.metadata.branchCount,
+        activeBranchId: this.activeBranchId || 'main',
+        isComplete: this.isComplete,
+        loadedAt: Date.now()
+      });
+    } catch (error) {
+      return this.makeError(error);
+    }
+  }
+
+  public sessionList(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+    try {
+      if (!this.persistence) {
+        throw new Error('Persistence is not enabled');
+      }
+
+      const data = input as Record<string, unknown>;
+      const status = typeof data.status === 'string' ? data.status : undefined;
+      const limit = typeof data.limit === 'number' ? data.limit : 20;
+
+      const sessions = this.persistence.listSessions({ status, limit });
+      const totalCount = this.persistence.countSessions(status);
+
+      return this.makeResponse({
+        sessions: sessions.map(s => ({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          thoughtCount: s.thoughtCount,
+          branchCount: s.branchCount,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+        })),
+        totalCount,
+        currentSessionId: this.currentSessionId
+      });
+    } catch (error) {
+      return this.makeError(error);
+    }
+  }
+
+  public sessionSummary(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+    try {
+      if (!this.persistence) {
+        throw new Error('Persistence is not enabled');
+      }
+
+      const data = input as Record<string, unknown>;
+
+      if (!data.id || typeof data.id !== 'string') {
+        throw new Error('Invalid id: must be a string');
+      }
+
+      const loaded = this.persistence.loadSession(data.id);
+      if (!loaded) {
+        throw new Error(`Session '${data.id}' not found`);
+      }
+
+      const maxLength = typeof data.maxLength === 'number' ? data.maxLength : 2000;
+
+      // Build summary from the session's thought history
+      const thoughts = loaded.state.thoughtHistory;
+      const branches = Object.values(loaded.state.branches);
+
+      // Extract key findings: conclusions, tagged thoughts, revisions
+      const keyFindings: string[] = [];
+      const summaryParts: string[] = [];
+
+      summaryParts.push(`Session "${loaded.metadata.name}" — ${thoughts.length} thoughts across ${branches.length + 1} threads (main + ${branches.length} branches).`);
+
+      // Main thread conclusions
+      const conclusions = thoughts.filter(t => t.thought.startsWith('CONCLUSION:'));
+      for (const c of conclusions) {
+        keyFindings.push(c.thought.replace('CONCLUSION: ', ''));
+      }
+
+      // Branch conclusions
+      for (const branch of branches) {
+        if (branch.conclusion) {
+          keyFindings.push(`[${branch.branchId}] ${branch.conclusion}`);
+        }
+        const statusNote = branch.status === 'merged' ? 'merged' : branch.status === 'closed' ? 'closed' : 'active';
+        summaryParts.push(`Branch "${branch.branchId}": ${branch.thoughts.length} thoughts, ${statusNote}.`);
+      }
+
+      // Tagged thoughts as key findings
+      const taggedThoughts = thoughts.filter(t => t.tags && t.tags.length > 0);
+      for (const t of taggedThoughts) {
+        if (!t.thought.startsWith('CONCLUSION:') && !t.thought.startsWith('BRANCH START:')) {
+          keyFindings.push(`[${t.tags!.join(', ')}] ${t.thought.substring(0, 100)}`);
+        }
+      }
+
+      // Truncate summary to maxLength
+      let summary = summaryParts.join('\n');
+      if (summary.length > maxLength) {
+        summary = summary.substring(0, maxLength - 3) + '...';
+      }
+
+      return this.makeResponse({
+        sessionId: data.id,
+        name: loaded.metadata.name,
+        summary,
+        thoughtCount: loaded.metadata.thoughtCount,
+        branchCount: loaded.metadata.branchCount,
+        keyFindings
+      });
+    } catch (error) {
+      return this.makeError(error);
     }
   }
 }

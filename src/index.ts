@@ -228,11 +228,66 @@ const VISUALIZE_TOOL: Tool = {
 };
 
 // =============================================================================
+// SESSION TOOLS (v2.3)
+// =============================================================================
+
+const SESSION_SAVE_TOOL: Tool = {
+  name: "session_save",
+  description: "Name and describe the current thinking session for later retrieval. Data is already persisted automatically — this adds a meaningful name and optional description.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "A descriptive name for this session (e.g., 'Debugging auth flow')" },
+      description: { type: "string", description: "Optional longer description of the session's purpose or context" }
+    },
+    required: ["name"]
+  }
+};
+
+const SESSION_LOAD_TOOL: Tool = {
+  name: "session_load",
+  description: "Restore a previously saved thinking session into memory. Resumes where you left off — all thoughts, branches, and tags are restored.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "The session UUID to load (from session_list)" }
+    },
+    required: ["id"]
+  }
+};
+
+const SESSION_LIST_TOOL: Tool = {
+  name: "session_list",
+  description: "Browse available thinking sessions. Shows most recently updated first.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      status: { type: "string", enum: ["active", "complete", "archived"], description: "Filter by session status" },
+      limit: { type: "integer", description: "Max sessions to return (default: 20)", minimum: 1, maximum: 100 }
+    },
+    required: []
+  }
+};
+
+const SESSION_SUMMARY_TOOL: Tool = {
+  name: "session_summary",
+  description: "Generate a compressed summary of a thinking session for token-efficient context loading. Includes key findings from conclusions, tagged thoughts, and branch results.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "The session UUID to summarize" },
+      maxLength: { type: "integer", description: "Target summary length in characters (default: 2000)", minimum: 100 }
+    },
+    required: ["id"]
+  }
+};
+
+// =============================================================================
 // SERVER SETUP
 // =============================================================================
 
 const server = new Server(
-  { name: "maxential-thinking-server", version: "2.2.0" },
+  { name: "maxential-thinking-server", version: "2.3.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -244,6 +299,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     BRANCH_TOOL, SWITCH_BRANCH_TOOL, LIST_BRANCHES_TOOL, GET_BRANCH_TOOL, CLOSE_BRANCH_TOOL, MERGE_BRANCH_TOOL,
     GET_THOUGHT_TOOL, GET_HISTORY_TOOL,
     TAG_TOOL, SEARCH_TOOL, EXPORT_TOOL, VISUALIZE_TOOL,
+    SESSION_SAVE_TOOL, SESSION_LOAD_TOOL, SESSION_LIST_TOOL, SESSION_SUMMARY_TOOL,
   ],
 }));
 
@@ -265,6 +321,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case "search": return thinkingServer.search(request.params.arguments);
     case "export": return thinkingServer.export(request.params.arguments);
     case "visualize": return thinkingServer.visualize(request.params.arguments);
+    case "session_save": return thinkingServer.sessionSave(request.params.arguments);
+    case "session_load": return thinkingServer.sessionLoad(request.params.arguments);
+    case "session_list": return thinkingServer.sessionList(request.params.arguments);
+    case "session_summary": return thinkingServer.sessionSummary(request.params.arguments);
     default:
       return { content: [{ type: "text", text: "Unknown tool: " + request.params.name }], isError: true };
   }
@@ -273,7 +333,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MAXential Thinking MCP Server v2.2.0 running on stdio");
+  console.error("MAXential Thinking MCP Server v2.3.0 running on stdio");
 }
 
 runServer().catch((error) => {
