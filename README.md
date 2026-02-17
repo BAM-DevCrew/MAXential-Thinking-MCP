@@ -35,7 +35,7 @@ Using this MCP server instead of Sequential Thinking MCP, you gain:
 
 **Original sequential-thinking:** 1 tool with 9 parameters. Branch parameters existed but no way to use them.
 
-**MAXential Thinking v2.0:** 11 focused tools that match reasoning patterns:
+**MAXential Thinking v2.3:** 20 focused tools that match reasoning patterns:
 - No parameter juggling - simply call the right tool
 - Branching works - explore, switch, merge, close
   
@@ -79,6 +79,16 @@ AI models benefit from structured thinking. This server externalizes that proces
 | `export` | Export to markdown or JSON |
 | `visualize` | Generate ASCII or Mermaid diagrams |
 
+### Session Persistence (v2.3)
+| Tool | Description |
+|------|-------------|
+| `session_save` | Name and describe the current session for later retrieval |
+| `session_load` | Restore a saved session — all thoughts, branches, and tags |
+| `session_list` | Browse available sessions, filter by status |
+| `session_summary` | Generate a compressed summary for token-efficient context loading |
+
+Thinking sessions are automatically persisted to SQLite as you work. Every `think`, `branch`, `tag`, and `revise` call writes through to disk in real time. Sessions survive server restarts and context window resets — pick up where you left off in a new conversation.
+
 ## Installation
 
 ### Claude Desktop
@@ -120,6 +130,36 @@ Then configure:
 }
 ```
 
+## Configuration
+
+### Persistence (v2.3)
+
+Session data is stored in SQLite. By default, the database file is created at `.maxential/thinking.db` in the working directory. You can customize this:
+
+```json
+{
+  "mcpServers": {
+    "maxential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@bam-devcrew/maxential-thinking-mcp"],
+      "env": {
+        "MAXENTIAL_DB_PATH": "/path/to/your/thinking.db"
+      }
+    }
+  }
+}
+```
+
+| `MAXENTIAL_DB_PATH` value | Behavior |
+|---------------------------|----------|
+| *(not set)* | `.maxential/thinking.db` in working directory (default) |
+| `/path/to/file.db` | Use explicit file path |
+| `:memory:` | In-memory SQLite — no file created, data lost on restart |
+
+If SQLite initialization fails (permissions, native module issues), the server falls back to in-memory mode automatically — it never crashes.
+
+**Note:** Add `.maxential/` to your project's `.gitignore` to keep session data out of version control.
+
 ## Usage Examples
 
 ### Basic Thinking
@@ -148,6 +188,19 @@ search: query="database"           # Find by content
 search: tags=["decision"]          # Find by tag
 export: format="markdown"          # Get full chain as markdown
 visualize: format="mermaid"        # Get diagram for docs
+```
+
+### Session Persistence
+```
+think: "Working through the auth redesign..."
+think: "JWT approach has these tradeoffs..."
+session_save: name="Auth redesign analysis"
+
+# Later, in a new conversation:
+session_list:                      # Browse saved sessions
+session_load: id="<session-uuid>"  # Restore full context
+think: "Continuing where I left off..."
+session_summary: id="<session-uuid>"  # Get compressed recap
 ```
 
 ## Visualization Output
