@@ -49,6 +49,7 @@ temp/
 .mcp.json
 
 # Registry tokens (credentials)
+.npmrc
 .mcpregistry_*
 
 # Binaries and build artifacts
