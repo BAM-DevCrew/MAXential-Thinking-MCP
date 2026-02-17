@@ -5,7 +5,6 @@ import {
   BranchData,
   BranchSummary,
   BranchError,
-  SessionMetadata,
 } from './types/index.js';
 import { PersistenceLayer, resolveDbPath } from './persistence.js';
 
@@ -730,40 +729,6 @@ export class SequentialThinkingServer {
     return mermaid;
   }
 
-
-  // ===========================================================================
-  // Legacy Methods (v1.0)
-  // ===========================================================================
-
-  private validateThoughtData(input: unknown): ThoughtData {
-    const data = input as Record<string, unknown>;
-
-    if (!data.thought || typeof data.thought !== 'string') {
-      throw new Error('Invalid thought: must be a string');
-    }
-    if (!data.thoughtNumber || typeof data.thoughtNumber !== 'number') {
-      throw new Error('Invalid thoughtNumber: must be a number');
-    }
-    if (!data.totalThoughts || typeof data.totalThoughts !== 'number') {
-      throw new Error('Invalid totalThoughts: must be a number');
-    }
-    if (typeof data.nextThoughtNeeded !== 'boolean') {
-      throw new Error('Invalid nextThoughtNeeded: must be a boolean');
-    }
-
-    return {
-      thought: data.thought,
-      thoughtNumber: data.thoughtNumber,
-      totalThoughts: data.totalThoughts,
-      nextThoughtNeeded: data.nextThoughtNeeded,
-      isRevision: data.isRevision as boolean | undefined,
-      revisesThought: data.revisesThought as number | undefined,
-      branchFromThought: data.branchFromThought as number | undefined,
-      branchId: data.branchId as string | undefined,
-      needsMoreThoughts: data.needsMoreThoughts as boolean | undefined,
-    };
-  }
-
   private formatThought(thoughtData: ThoughtData): string {
     const { thoughtNumber, totalThoughts, thought, isRevision, revisesThought, branchFromThought, branchId } = thoughtData;
 
@@ -790,62 +755,6 @@ export class SequentialThinkingServer {
 ├${border}┤
 │ ${thought.padEnd(border.length - 2)} │
 └${border}┘`;
-  }
-
-  public processThought(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
-    try {
-      const validatedInput = this.validateThoughtData(input);
-
-      if (validatedInput.thoughtNumber > validatedInput.totalThoughts) {
-        validatedInput.totalThoughts = validatedInput.thoughtNumber;
-      }
-
-      this.thoughtHistory.push(validatedInput);
-
-      if (validatedInput.branchFromThought && validatedInput.branchId) {
-        if (!this.branches[validatedInput.branchId]) {
-          this.branches[validatedInput.branchId] = {
-            branchId: validatedInput.branchId,
-            originThought: validatedInput.branchFromThought,
-            thoughts: [],
-            status: 'active',
-            createdAt: Date.now()
-          };
-        }
-        this.branches[validatedInput.branchId].thoughts.push(validatedInput);
-        this.activeBranchId = validatedInput.branchId;
-      }
-
-      if (!this.disableThoughtLogging) {
-        const formattedThought = this.formatThought(validatedInput);
-        console.error(formattedThought);
-      }
-
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            thoughtNumber: validatedInput.thoughtNumber,
-            totalThoughts: validatedInput.totalThoughts,
-            nextThoughtNeeded: validatedInput.nextThoughtNeeded,
-            activeBranchId: this.activeBranchId,
-            branches: this.getBranchSummaries(),
-            thoughtHistoryLength: this.thoughtHistory.length
-          }, null, 2)
-        }]
-      };
-    } catch (error) {
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
-            status: 'failed'
-          }, null, 2)
-        }],
-        isError: true
-      };
-    }
   }
 
   private getBranchSummaries(): BranchSummary[] {
